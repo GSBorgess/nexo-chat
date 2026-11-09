@@ -1,0 +1,55 @@
+# Pesquisa: Nexo Chat
+
+O repositório atualmente contém arquivos de especificação e planejamento, mas nenhum aplicativo-fonte nem convenções de runtime estabelecidas. As decisões abaixo são escolhas de design para esta funcionalidade, e não afirmações sobre o código existente.
+
+## Runtime e entrega em tempo real
+
+- **Decisão**: usar endpoints HTTP do Fastify para comandos duráveis e histórico paginado, além de um canal WebSocket autenticado para notificações em tempo real. Confirmar cada mensagem no PostgreSQL antes de transmitir. Usar uma chave de idempotência gerada no cliente e reconciliar reconexões a partir do histórico persistido.
+- **Racional**: o banco continua sendo a fonte de verdade quando as conexões caem; as respostas HTTP podem distinguir envios persistidos de falhas. `@fastify/websocket` atende ao servidor Fastify solicitado sem introduzir outro protocolo de mensagem.
+- **Alternativas consideradas**: Socket.IO oferece reconexão e confirmações de alto nível, mas adiciona uma dependência de protocolo e não substitui persistência/reconciliação. Um outbox transacional e pub/sub entre instâncias podem ser adicionados se a API escalar além de uma instância única.
+- **Referências**: [Fastify WebSocket](https://github.com/fastify/fastify-websocket); [Socket.IO delivery guarantees](https://socket.io/docs/v4/delivery-guarantees/); [Socket.IO connection recovery](https://socket.io/docs/v4/connection-state-recovery/).
+
+## Modelo PostgreSQL e Prisma
+
+- **Decisão**: usar um UUID interno para relações do banco e um ID público Nexo estável e aleatório para busca. Modelar a amizade como uma linha por par canônico de usuários, membership explícito em conversas e mensagens com uma chave única de idempotência por autor/conversa. Armazenar metadados de anexos no PostgreSQL e objetos binários fora dele. Usar transações para mudanças compostas e índices para membership e consultas de histórico por cursor.
+- **Racional**: membership explícito suporta papéis de grupo e verificações de autorização; pares canônicos evitam solicitações de amizade reversas duplicadas; chaves únicas de idempotência tornam as retentativas seguras. Restrições do banco complementam a autorização em nível de serviço.
+- **Alternativas consideradas**: armazenar objetos binários diretamente no PostgreSQL acoplaria o armazenamento do histórico de chat a arquivos grandes. Linhas de amizade direcionadas exigem tratamento extra para evitar solicitações duplicadas reversas.
+- **Referências**: [Prisma relational modeling](https://www.prisma.io/docs/orm/data-modeling/relational-databases); [Prisma explicit many-to-many relations](https://www.prisma.io/docs/orm/v7/prisma-schema/data-model/relations/many-to-many-relations); [Prisma transactions](https://www.prisma.io/docs/orm/fundamentals/transactions); [PostgreSQL constraints](https://www.postgresql.org/docs/current/ddl-constraints.html).
+
+## Autenticação Auth0 e login do Google
+
+- **Decisão**: usar Auth0 Universal Login para e-mail/senha e Google. O SPA usa `@auth0/auth0-react` com Authorization Code Flow + PKCE e cache de tokens em memória. Configurar o Google como uma Social Connection do Auth0 (`google-oauth2`) no tenant Auth0; as credenciais do cliente Google permanecem no Auth0 e não são configuradas nesta aplicação. A API valida access tokens bearer com o JWKS do Auth0, issuer exato e audience configurada; o `sub` verificado e imutável vincula-se ao perfil do Nexo. Não criar senhas de aplicação, cookies de sessão, sessões do lado do servidor ou `SESSION_SECRET`.
+- **Racional**: o Auth0 controla o tratamento de credenciais e a federação de provedores de identidade. Access tokens com audience vinculada e assinatura verificada permitem que a API autentique os chamadores sem duplicar infraestrutura de login/sessão ou expor tokens em respostas/logs da aplicação.
+- **Alternativas consideradas**: armazenamento customizado de senhas, verificação do Google OIDC e sessões opacas da aplicação duplicam a funcionalidade que o Auth0 oferece. ID tokens não são aceitos como credenciais da API; CORS não é um controle de autenticação.
+- **Configuração operacional**: registrar um Single Page Application e uma API no Auth0; configurar callback, logout e origens web do SPA; habilitar e-mail/senha e a conexão do Google; definir a audience da API; configurar os valores correspondentes de `VITE_AUTH0_*` para o SPA e `AUTH0_*` para a API.
+- **Referências**: [Auth0 React SDK](https://auth0.com/docs/libraries/auth0-react); [Auth0 SPA Quickstart](https://auth0.com/docs/quickstart/spa/react); [Auth0 access token validation](https://auth0.com/docs/secure/tokens/access-tokens/validate-access-tokens); [Auth0 Google social connection](https://auth0.com/docs/authenticate/identity-providers/social-identity-providers/google).
+
+## Anexos e mensagens de voz
+
+- **Decisão**: usar armazenamento privado compatível com S3 com chaves de objeto geradas e URLs curtas de upload/download. Autorizar intenções de upload por membership na conversa, impor a allowlist confirmada e um limite de 25 MiB no servidor, verificar o conteúdo enviado antes do anexo e limpar uploads abandonados. Usar o navegador `MediaRecorder` para notas de voz, limitadas a 5 minutos e 25 MiB.
+- **Racional**: áudio e anexos são necessários, e manter payloads binários grandes fora do PostgreSQL separa o ciclo de vida dos objetos e backups do banco. URLs privadas de acesso só podem ser emitidas após a verificação de membership.
+- **Alternativas consideradas**: URLs públicas de objeto expõem conteúdo privado da conversa; confiar em metadados MIME do navegador ou extensões de arquivo é insuficiente. Streaming multipart via Fastify é possível, mas exige limites agregados cuidadosos.
+- **Referências**: [OWASP File Upload](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html); [Fastify multipart](https://github.com/fastify/fastify-multipart); [S3 presigned uploads](https://docs.aws.amazon.com/AmazonS3/latest/userguide/PresignedUrlUploadObject.html); [MDN MediaRecorder](https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder).
+
+## Fastify, Zod e CORS
+
+- **Decisão**: definir schemas Zod para parâmetros de requisição, bodies, payloads WebSocket e formatos de resposta, reutilizando tipos TypeScript inferidos por meio de uma integração compatível com Fastify. Configurar CORS com origens, métodos e headers explícitos; permitir credenciais apenas para essas origens.
+- **Racional**: uma única fonte de regras de validação evita divergência. Schemas de resposta reduzem a exposição acidental de dados. Autorizações e regras dependentes do banco pertencem à lógica de aplicação/serviço, não à validação estrutural.
+- **Alternativas consideradas**: manter definições separadas de Zod e JSON Schema duplica regras. CORS com wildcard credenciado não é uma configuração aceitável.
+- **Referências**: [Fastify validation and serialization](https://fastify.dev/docs/latest/Reference/Validation-and-Serialization/); [Zod basics](https://zod.dev/basics); [Fastify CORS plugin](https://github.com/fastify/fastify-cors).
+
+## Cliente responsivo e acessível
+
+- **Decisão**: tratar o [design do Figma](https://www.figma.com/make/hQBtdDBnOD3XzhcxaOevGj/Chat-App?p=f&t=PUMWhm1j6Oql3L2F-0) e a captura anexada como referência visual. Em telas largas, usar um painel esquerdo persistente para marca, stories, busca de conversa e filtros, lista de conversas e navegação inferior; usar o painel direito maior para o cabeçalho da conversa ativa, histórico de mensagens e compositor. Seguir as superfícies brancas/claro-lavanda, acento roxo, painéis arredondados e bolhas de mensagem, sombras sutis, avatares e badges compactos de status/unread. Em telas estreitas, tornar a lista de conversas e a conversa ativa navegáveis em modo single-pane. Compor telas React orientadas por funcionalidade a partir de primitivas do shadcn/ui estilizadas com Tailwind; usar ícones Lucide com nomes acessíveis, foco visível por teclado, controles semânticos e estados de envio/falha/reconexão/upload anunciados. Tratar controles de telefone/vídeo na maquete como placeholders visuais apenas: chamadas ao vivo estão fora do escopo atual.
+- **Racional**: o design enviado fornece uma composição de desktop concreta e linguagem visual, enquanto a constituição e a especificação exigem acessibilidade por teclado, status claros, layouts responsivos e apenas a funcionalidade de chat declarada.
+- **Alternativas consideradas**: controles sem rótulo e indicadores visuais transitórios de status excluem usuários de teclado e tecnologia assistiva.
+- **Referências**: [WCAG keyboard](https://www.w3.org/WAI/standards-guidelines/wcag/), [Material Design responsive patterns](https://m3.material.io/foundations/design-for-developers/responsive-layout), [shadcn/ui accessibility](https://ui.shadcn.com/docs). w.w3.org/WAI/WCAG22/Understanding/keyboard.html); [WCAG status messages](https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html); [WCAG reflow](https://www.w3.org/WAI/WCAG22/Understanding/reflow.html); [shadcn/ui](https://ui.shadcn.com/docs); [Lucide React](https://lucide.dev/guide/react).
+
+## Product and operational assumptions
+
+- **Decision**: Use a 12-character uppercase Crockford Base32 random public ID with a uniqueness check; disallow lookup by email. Allow JPEG, PNG, WebP, PDF, DOCX, and TXT attachments at no more than 25 MiB each; allow WebM, Ogg, and MP4 voice audio capped at 5 minutes and 25 MiB. Keep group membership limited to accepted contacts added by the group owner; do not add invitations, advanced administration, calls, edits, read receipts, or message deletion.
+- **Rationale**: The public identifier is shareable without exposing email or sequential account counts. Upload values were confirmed by the user for this plan. Additional chat controls are not in the feature scope.
+- **Alternatives considered**: Sequential IDs reveal account growth; a broader MIME/extension policy increases validation and content-handling scope. Alternative limits can be changed before implementation if product needs differ.
+- **Decision**: Keep storage provider-neutral behind an S3-compatible adapter and target one API instance initially; add cross-instance pub/sub only when deployment needs multiple instances. Retain committed messages and attached objects for conversation history, with no automatic expiry or deletion workflow in this feature. Expire unassociated pending uploads after 24 hours.
+- **Rationale**: The spec requires messages and content to remain available after disconnection, but defines no deletion feature or horizontal-scale target. The retention behavior is an explicit MVP assumption; review it before publishing a production retention policy.
+- **Alternatives considered**: A provider-specific storage SDK or multi-instance fan-out would add operational coupling without a stated requirement. Automatic expiry would conflict with returning users' access to conversation history.

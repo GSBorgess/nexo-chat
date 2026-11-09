@@ -1,0 +1,418 @@
+openapi: 3.1.0
+info:
+  title: Nexo Chat API
+  version: 1.0.0
+  description: HTTP contract for Auth0-authenticated Nexo profiles, contacts, conversations, messages, and uploads.
+servers:
+  - url: https://api.example.invalid
+    description: Replace with the configured API origin.
+security:
+  - auth0AccessToken: []
+paths:
+  /api/auth/me:
+    get:
+      summary: Return the authenticated Auth0 identity
+      description: Requires an Auth0 access token for this API audience; ID tokens are not accepted.
+      responses:
+        '200':
+          description: Verified Auth0 subject for the current caller.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sub]
+                properties:
+                  sub: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/users/by-public-id/{publicId}:
+    get:
+      summary: Find an account by its shareable Nexo ID
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema: { type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{12}$' }
+      responses:
+        '200':
+          description: Public profile only; never returns email or credentials.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicUser' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/friendships:
+    get:
+      summary: List accepted contacts and pending requests
+      responses:
+        '200':
+          description: Current user's friendship records.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Friendship' }
+    post:
+      summary: Request friendship using the recipient's public ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [publicId]
+              properties:
+                publicId: { type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{12}$' }
+      responses:
+        '201':
+          description: Request created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Friendship' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/friendships/{friendshipId}:
+    patch:
+      summary: Accept or decline a pending friendship request addressed to the caller
+      parameters:
+        - in: path
+          name: friendshipId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [ACCEPTED, DECLINED] }
+      responses:
+        '200':
+          description: Friendship state updated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Friendship' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/conversations:
+    get:
+      summary: List direct and group conversations for the caller
+      responses:
+        '200':
+          description: Conversations ordered by latest activity.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Conversation' }
+    post:
+      summary: Find or create a direct conversation with an accepted contact
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contactPublicId]
+              properties:
+                contactPublicId: { type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{12}$' }
+      responses:
+        '200':
+          description: Existing direct conversation returned.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Conversation' }
+        '201':
+          description: Direct conversation created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Conversation' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/groups:
+    post:
+      summary: Create a group with accepted contacts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, memberPublicIds]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 100 }
+                memberPublicIds:
+                  type: array
+                  minItems: 1
+                  uniqueItems: true
+                  items: { type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{12}$' }
+      responses:
+        '201':
+          description: Group and its initial memberships created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Conversation' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/groups/{conversationId}/members:
+    post:
+      summary: Add accepted contacts to a group
+      description: Only the group owner may add current accepted contacts.
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [memberPublicIds]
+              properties:
+                memberPublicIds:
+                  type: array
+                  minItems: 1
+                  uniqueItems: true
+                  items: { type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{12}$' }
+      responses:
+        '204': { description: Group memberships updated. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/conversations/{conversationId}/messages:
+    get:
+      summary: Read persisted messages using a stable backward cursor
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: query
+          name: before
+          required: false
+          description: Opaque cursor from the preceding response.
+          schema: { type: string }
+        - in: query
+          name: limit
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Messages in chronological order and an optional next cursor.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Message' }
+                  nextCursor: { type: [string, 'null'] }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      summary: Persist a text, emoji, voice, or file message
+      description: Emoji are Unicode text. AUDIO and FILE messages reference a completed attachment upload.
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateMessage' }
+      responses:
+        '201':
+          description: Message committed; it will be broadcast to connected members.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/uploads:
+    post:
+      summary: Create a membership-authorized private object upload intent
+      description: Maximum 25 MiB. Allowed files are JPEG, PNG, WebP, PDF, DOCX, and TXT; voice audio is WebM, Ogg, or MP4 and is limited to 5 minutes and 25 MiB.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [conversationId, fileName, mediaType, sizeBytes]
+              properties:
+                conversationId: { type: string, format: uuid }
+                fileName: { type: string, maxLength: 255 }
+                mediaType:
+                  type: string
+                  description: Allowed MIME type essence; durationMs is required for audio.
+                  enum:
+                    - image/jpeg
+                    - image/png
+                    - image/webp
+                    - application/pdf
+                    - application/vnd.openxmlformats-officedocument.wordprocessingml.document
+                    - text/plain
+                    - audio/webm
+                    - audio/ogg
+                    - audio/mp4
+                sizeBytes: { type: integer, minimum: 1, maximum: 26214400 }
+                durationMs: { type: integer, minimum: 1, maximum: 300000 }
+      responses:
+        '201':
+          description: Short-lived upload URL and pending attachment.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [attachmentId, uploadUrl, expiresAt]
+                properties:
+                  attachmentId: { type: string, format: uuid }
+                  uploadUrl: { type: string, format: uri }
+                  expiresAt: { type: string, format: date-time }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/uploads/{attachmentId}/complete:
+    post:
+      summary: Verify uploaded object size and content before making it attachable
+      parameters:
+        - in: path
+          name: attachmentId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Attachment verified and ready to be referenced by a message. }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/attachments/{attachmentId}/download:
+    get:
+      summary: Authorize a member and return a short-lived private download URL
+      parameters:
+        - in: path
+          name: attachmentId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Authorized temporary download location.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [downloadUrl, expiresAt]
+                properties:
+                  downloadUrl: { type: string, format: uri }
+                  expiresAt: { type: string, format: date-time }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+components:
+  securitySchemes:
+    auth0AccessToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    PublicUser:
+      type: object
+      required: [publicId, displayName]
+      properties:
+        publicId: { type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{12}$' }
+        displayName: { type: string }
+    Friendship:
+      type: object
+      required: [id, status, direction, otherUser]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [PENDING, ACCEPTED, DECLINED] }
+        direction: { type: string, enum: [INCOMING, OUTGOING] }
+        otherUser: { $ref: '#/components/schemas/PublicUser' }
+    Conversation:
+      type: object
+      required: [id, kind, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [DIRECT, GROUP] }
+        name: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+    CreateMessage:
+      oneOf:
+        - type: object
+          required: [clientMessageId, kind, text]
+          additionalProperties: false
+          properties:
+            clientMessageId: { type: string, format: uuid }
+            kind: { const: TEXT }
+            text: { type: string, minLength: 1, maxLength: 10000 }
+        - type: object
+          required: [clientMessageId, kind, attachmentId]
+          additionalProperties: false
+          properties:
+            clientMessageId: { type: string, format: uuid }
+            kind: { const: AUDIO }
+            attachmentId: { type: string, format: uuid }
+        - type: object
+          required: [clientMessageId, kind, attachmentId]
+          additionalProperties: false
+          properties:
+            clientMessageId: { type: string, format: uuid }
+            kind: { const: FILE }
+            attachmentId: { type: string, format: uuid }
+    Message:
+      type: object
+      required: [id, conversationId, author, clientMessageId, kind, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        conversationId: { type: string, format: uuid }
+        author: { $ref: '#/components/schemas/PublicUser' }
+        clientMessageId: { type: string, format: uuid }
+        kind: { type: string, enum: [TEXT, AUDIO, FILE] }
+        text: { type: [string, 'null'] }
+        attachmentId: { type: [string, 'null'], format: uuid }
+        createdAt: { type: string, format: date-time }
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+  responses:
+    ValidationError:
+      description: Invalid input or disallowed upload.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Authentication required or credentials invalid.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Caller is not authorized for the requested resource.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: Resource already exists or requested state transition is invalid.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
