@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig, env } from 'prisma/config'
 
 const apiDirectory = dirname(fileURLToPath(import.meta.url))
-config({ path: resolve(apiDirectory, '../../.env') })
+config({ path: resolve(apiDirectory, '.env') })
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',
