@@ -31,7 +31,7 @@ description: "Tarefas executáveis para implementar o Nexo Chat"
 **⚠️ CRITICAL**: Concluir esta fase antes das histórias de usuário.
 
 - [X] T006 Configurar PostgreSQL/Prisma em `apps/api/prisma/schema.prisma` e `apps/api/src/infrastructure/database/prisma.ts`, preparando geração do cliente tipado e ciclo de vida da conexão sem antecipar modelos específicos de história.
-- [ ] T007 Criar validação de configuração com Zod em `apps/api/src/config/env.ts`, validando no startup issuer/domain, audience Auth0 e origem web; falhar com erro explícito quando faltar configuração obrigatória.
+- [X] T007 Criar validação de configuração com Zod em `apps/api/src/config/env.ts`, validando no startup issuer/domain, audience Auth0 e origem web; falhar com erro explícito quando faltar configuração obrigatória.
 - [ ] T008 Criar o bootstrap e servidor Fastify em `apps/api/src/app.ts` e `apps/api/src/server.ts`, registrando plugins, rotas versionadas sob `/api` e encerramento gracioso do servidor e do cliente Prisma.
 - [ ] T009 Implementar resposta de erro consistente e logging estruturado em `apps/api/src/infrastructure/http/errors.ts` e `apps/api/src/infrastructure/http/error-handler.ts`, sem expor stack traces, segredos ou detalhes internos nas respostas públicas.
 - [ ] T010 Implementar a configuração HTTP de `apps/api/src/infrastructure/http/security-plugins.ts` e registrá-la em `apps/api/src/app.ts`: CORS com origens exatas, sem autenticação por cookie; validar bearer access tokens Auth0 nas rotas protegidas e não registrar tokens.
