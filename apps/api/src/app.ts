@@ -3,11 +3,14 @@ import cors from '@fastify/cors'
 
 import { env } from './config/env.js'
 import { disconnectPrisma } from './infrastructure/database/prisma.js'
+import { registerErrorHandler } from './infrastructure/http/error-handler.js'
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
     logger: true,
   })
+
+  registerErrorHandler(app)
 
   await app.register(cors, {
     origin: env.webOrigin,
