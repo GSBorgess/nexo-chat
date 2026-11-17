@@ -1,9 +1,8 @@
 import Fastify, { type FastifyInstance } from 'fastify'
-import cors from '@fastify/cors'
 
-import { env } from './config/env.js'
 import { disconnectPrisma } from './infrastructure/database/prisma.js'
 import { registerErrorHandler } from './infrastructure/http/error-handler.js'
+import { registerSecurityPlugins } from './infrastructure/http/security-plugins.js'
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -11,13 +10,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   })
 
   registerErrorHandler(app)
-
-  await app.register(cors, {
-    origin: env.webOrigin,
-    credentials: false,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
+  await registerSecurityPlugins(app)
 
   await app.register(
     async (instance) => {
