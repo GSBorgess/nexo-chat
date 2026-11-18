@@ -6,3 +6,27 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum AuthProvider {
+  AUTH0
+}
+
+model User {
+  id           String        @id @default(uuid()) @db.Uuid
+  publicId     String        @unique @db.VarChar(12)
+  email        String
+  displayName  String
+  createdAt    DateTime      @default(now()) @db.Timestamptz(6)
+  authIdentity AuthIdentity?
+}
+
+model AuthIdentity {
+  id              String       @id @default(uuid()) @db.Uuid
+  userId          String       @unique @db.Uuid
+  provider        AuthProvider @default(AUTH0)
+  providerSubject String
+  createdAt       DateTime     @default(now()) @db.Timestamptz(6)
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerSubject])
+}

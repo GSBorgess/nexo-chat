@@ -49,7 +49,7 @@ description: "Tarefas executáveis para implementar o Nexo Chat"
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Definir `User` e `AuthIdentity` e sua migração em `apps/api/prisma/schema.prisma` e `apps/api/prisma/migrations/`; incluir `id` UUID interno, `publicId` aleatório e único, e-mail/perfil derivados de claims verificados, `AuthIdentity.provider=AUTH0` e `providerSubject` único com o claim `sub`; não criar `passwordHash` nem modelo/tabela de sessão.
+- [X] T012 [US1] Definir `User` e `AuthIdentity` e sua migração em `apps/api/prisma/schema.prisma` e `apps/api/prisma/migrations/`; incluir `id` UUID interno, `publicId` aleatório e único, e-mail/perfil derivados de claims verificados, `AuthIdentity.provider=AUTH0` e `providerSubject` único com o claim `sub`; não criar `passwordHash` nem modelo/tabela de sessão.
 - [ ] T013 [US1] Implementar geração criptograficamente segura e verificação de colisão do ID Crockford Base32 de 12 caracteres em `apps/api/src/features/auth/public-id.service.ts`, sem derivá-lo do e-mail ou do `sub` Auth0.
 - [ ] T014 [US1] Implementar provisionamento idempotente do perfil Nexo a partir de claims de access token Auth0 verificados em `apps/api/src/features/auth/auth.service.ts`; associar pelo `sub` imutável, nunca somente por e-mail, e nunca persistir tokens ou credenciais.
 - [ ] T015 [P] [US1] Implementar verificação de access tokens Auth0 em `apps/api/src/infrastructure/auth/require-auth.ts` usando JWKS, issuer e audience configurados; rejeitar tokens inválidos, expirados ou destinados a outra API.
