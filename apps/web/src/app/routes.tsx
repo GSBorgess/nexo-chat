@@ -1,4 +1,5 @@
 import { AppShell } from '../components/layout/AppShell'
+import { AuthPage } from '../features/auth/AuthPage'
 
 export type AppRoute = 'loading' | 'error' | 'login' | 'chat'
 
@@ -25,8 +26,10 @@ interface AppRoutesProps {
   apiIdentity: string | null
   apiCheckFailed: boolean
   onRetry: () => void
-  onLogin: () => void
+  onLogin: (email: string) => void
   onGoogleLogin: () => void
+  onForgotPassword: (email: string) => void
+  onCreateAccount: () => void
   onLogout: () => void
 }
 
@@ -39,6 +42,8 @@ export function AppRoutes({
   onRetry,
   onLogin,
   onGoogleLogin,
+  onForgotPassword,
+  onCreateAccount,
   onLogout,
 }: AppRoutesProps) {
   if (route === 'loading') {
@@ -75,20 +80,11 @@ export function AppRoutes({
   }
 
   return (
-    <main className="auth-page">
-      <section className="auth-card" aria-labelledby="auth-title">
-        <p className="auth-eyebrow">Nexo Chat</p>
-        <h1 id="auth-title">Converse com quem importa</h1>
-        <p>Entre ou crie sua conta com segurança.</p>
-        <div className="auth-actions">
-          <button type="button" onClick={onLogin}>
-            Continuar com e-mail
-          </button>
-          <button type="button" className="secondary-button" onClick={onGoogleLogin}>
-            Continuar com Google
-          </button>
-        </div>
-      </section>
-    </main>
+    <AuthPage
+      onLogin={onLogin}
+      onGoogleLogin={onGoogleLogin}
+      onForgotPassword={onForgotPassword}
+      onCreateAccount={onCreateAccount}
+    />
   )
 }

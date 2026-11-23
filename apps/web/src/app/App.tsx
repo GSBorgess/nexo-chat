@@ -65,10 +65,24 @@ function App() {
       apiIdentity={apiIdentity}
       apiCheckFailed={apiCheckFailed}
       onRetry={() => void loginWithRedirect()}
-      onLogin={() => void loginWithRedirect()}
+      onLogin={(email) =>
+        void loginWithRedirect({
+          authorizationParams: { login_hint: email },
+        })
+      }
       onGoogleLogin={() =>
         void loginWithRedirect({
           authorizationParams: { connection: 'google-oauth2' },
+        })
+      }
+      onForgotPassword={(email) =>
+        void loginWithRedirect({
+          authorizationParams: email ? { login_hint: email } : {},
+        })
+      }
+      onCreateAccount={() =>
+        void loginWithRedirect({
+          authorizationParams: { screen_hint: 'signup' },
         })
       }
       onLogout={() =>
