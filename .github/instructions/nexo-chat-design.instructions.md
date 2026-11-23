@@ -36,3 +36,18 @@ componentes do frontend:
 
 Ao alterar o layout, verifique a composição em desktop e em tela estreita e
 preserve a hierarquia visual e o comportamento responsivo descritos acima.
+
+## Tela de login
+
+Use como referência principal o design de login fornecido pelo usuário:
+composição em duas colunas dentro de um cartão branco arredondado, painel
+esquerdo roxo com a marca Nexo, mensagem de boas-vindas e prévia decorativa de
+conversa; painel direito claro com título, entrada de e-mail, ação principal,
+alternativa Google, criação de conta e nota legal. Preserve o gradiente roxo,
+espaçamento generoso, contornos sutis e tipografia Geist. Em telas estreitas,
+reorganize a composição em coluna sem rolagem horizontal.
+
+O login deve continuar usando Auth0 Universal Login. Não colete nem armazene a
+senha no Nexo; o e-mail pode ser enviado como `login_hint`. A conexão Google
+deve continuar usando `google-oauth2`. Mantenha os elementos acessíveis e não
+apresente controles decorativos como ações funcionais.
