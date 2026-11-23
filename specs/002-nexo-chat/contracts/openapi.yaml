@@ -15,14 +15,16 @@ paths:
       description: Requires an Auth0 access token for this API audience; ID tokens are not accepted.
       responses:
         '200':
-          description: Verified Auth0 subject for the current caller.
+          description: Verified Auth0 subject and public profile for the current caller.
           content:
             application/json:
               schema:
                 type: object
-                required: [sub]
+                required: [sub, publicId, displayName]
                 properties:
                   sub: { type: string }
+                  publicId: { type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{12}$' }
+                  displayName: { type: string }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/users/by-public-id/{publicId}:
     get:
