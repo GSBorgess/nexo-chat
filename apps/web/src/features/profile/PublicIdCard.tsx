@@ -30,7 +30,12 @@ export function PublicIdCard({
   }
 
   return (
-    <section className="public-id-card" aria-labelledby="public-id-title">
+    <section
+      id="public-id-card"
+      className="public-id-card"
+      aria-labelledby="public-id-title"
+      tabIndex={-1}
+    >
       <div>
         <p id="public-id-title">Seu ID público</p>
         {loading && <span className="public-id-value" role="status">Carregando...</span>}
