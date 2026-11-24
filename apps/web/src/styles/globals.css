@@ -485,6 +485,82 @@ button:disabled {
   text-align: center;
 }
 
+.public-id-card {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 4px 21px 8px;
+  padding: 9px 10px 9px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: #fbfaff;
+}
+
+.public-id-card > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.public-id-card p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.public-id-value {
+  overflow: hidden;
+  color: var(--color-ink);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.public-id-copy {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  cursor: pointer;
+}
+
+.public-id-copy:hover {
+  background: #e8dcff;
+  color: var(--color-brand-strong);
+}
+
+.public-id-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.public-id-retry {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-brand);
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+}
+
 .bottom-nav {
   display: grid;
   min-height: 66px;

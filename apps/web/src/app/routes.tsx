@@ -1,5 +1,6 @@
 import { AppShell } from '../components/layout/AppShell'
 import { AuthPage } from '../features/auth/AuthPage'
+import { useSession } from './session'
 
 export type AppRoute = 'loading' | 'error' | 'login' | 'chat'
 
@@ -19,33 +20,14 @@ export function resolveAppRoute(
   return isAuthenticated ? 'chat' : 'login'
 }
 
-interface AppRoutesProps {
-  route: AppRoute
-  userName?: string | undefined
-  userEmail?: string | undefined
-  apiIdentity: string | null
-  apiCheckFailed: boolean
-  onRetry: () => void
-  onLogin: (email: string) => void
-  onGoogleLogin: () => void
-  onForgotPassword: (email: string) => void
-  onCreateAccount: () => void
-  onLogout: () => void
-}
+export function AppRoutes() {
+  const session = useSession()
+  const route = resolveAppRoute(
+    session.isLoading,
+    session.hasError,
+    session.isAuthenticated,
+  )
 
-export function AppRoutes({
-  route,
-  userName,
-  userEmail,
-  apiIdentity,
-  apiCheckFailed,
-  onRetry,
-  onLogin,
-  onGoogleLogin,
-  onForgotPassword,
-  onCreateAccount,
-  onLogout,
-}: AppRoutesProps) {
   if (route === 'loading') {
     return (
       <main className="auth-page" aria-live="polite">
@@ -60,7 +42,7 @@ export function AppRoutes({
         <section className="auth-card" aria-labelledby="auth-title">
           <h1 id="auth-title">Não foi possível autenticar</h1>
           <p role="alert">O serviço de autenticação não concluiu a solicitação. Tente novamente.</p>
-          <button type="button" onClick={onRetry}>
+          <button type="button" onClick={session.retryAuthentication}>
             Tentar novamente
           </button>
         </section>
@@ -71,20 +53,22 @@ export function AppRoutes({
   if (route === 'chat') {
     return (
       <AppShell
-        accountName={userName || userEmail || 'Conta Nexo'}
-        apiIdentity={apiIdentity}
-        apiCheckFailed={apiCheckFailed}
-        onLogout={onLogout}
+        accountName={session.userName || session.userEmail || 'Conta Nexo'}
+        publicId={session.profile?.publicId ?? null}
+        publicIdLoading={session.profileLoading}
+        publicIdFailed={session.profileFailed}
+        onRetryPublicId={session.retryProfile}
+        onLogout={session.logout}
       />
     )
   }
 
   return (
     <AuthPage
-      onLogin={onLogin}
-      onGoogleLogin={onGoogleLogin}
-      onForgotPassword={onForgotPassword}
-      onCreateAccount={onCreateAccount}
+      onLogin={session.login}
+      onGoogleLogin={session.loginWithGoogle}
+      onForgotPassword={session.forgotPassword}
+      onCreateAccount={session.createAccount}
     />
   )
 }

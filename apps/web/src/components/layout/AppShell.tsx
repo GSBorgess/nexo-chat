@@ -15,6 +15,7 @@ import {
   Video,
   X,
 } from 'lucide-react'
+import { PublicIdCard } from '../../features/profile/PublicIdCard'
 
 type Filter = 'Todos' | 'Grupos' | 'Não lidas'
 
@@ -123,12 +124,21 @@ const stories = [
 
 interface AppShellProps {
   accountName: string
-  apiIdentity: string | null
-  apiCheckFailed: boolean
+  publicId: string | null
+  publicIdLoading: boolean
+  publicIdFailed: boolean
+  onRetryPublicId: () => void
   onLogout: () => void
 }
 
-export function AppShell({ accountName, apiIdentity, apiCheckFailed, onLogout }: AppShellProps) {
+export function AppShell({
+  accountName,
+  publicId,
+  publicIdLoading,
+  publicIdFailed,
+  onRetryPublicId,
+  onLogout,
+}: AppShellProps) {
   const [activeId, setActiveId] = useState('emma')
   const [filter, setFilter] = useState<Filter>('Todos')
   const [search, setSearch] = useState('')
@@ -296,6 +306,13 @@ export function AppShell({ accountName, apiIdentity, apiCheckFailed, onLogout }:
           </ul>
         </section>
 
+        <PublicIdCard
+          publicId={publicId}
+          loading={publicIdLoading}
+          failed={publicIdFailed}
+          onRetry={onRetryPublicId}
+        />
+
         <nav className="bottom-nav" aria-label="Navegação principal">
           <a className="bottom-nav-item is-active" href="#conversas" aria-current="page">
             <MessageCircle size={20} />
@@ -343,12 +360,6 @@ export function AppShell({ accountName, apiIdentity, apiCheckFailed, onLogout }:
               {activeConversation.isGroup ? 'Grupo' : 'Online agora'}
             </p>
           </div>
-          {apiIdentity && <span className="api-status">Conectado</span>}
-          {apiCheckFailed && (
-            <span className="api-status is-error" role="status">
-              API indisponível
-            </span>
-          )}
           <div className="chat-actions">
             <button
               className="icon-button"

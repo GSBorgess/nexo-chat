@@ -55,7 +55,7 @@ description: "Tarefas executáveis para implementar o Nexo Chat"
 - [X] T015 [P] [US1] Implementar verificação de access tokens Auth0 em `apps/api/src/infrastructure/auth/require-auth.ts` usando JWKS, issuer e audience configurados; rejeitar tokens inválidos, expirados ou destinados a outra API.
 - [X] T016 [US1] Implementar `GET /api/auth/me` em `apps/api/src/features/auth/auth.routes.ts` e integrar a guarda reutilizável de bearer token; não emitir cookies de sessão nem aceitar ID tokens como credenciais da API.
 - [X] T017 [P] [US1] Criar telas acessíveis de login/retorno Auth0 em `apps/web/src/features/auth/AuthPage.tsx`, usando Auth0 Universal Login para e-mail e conexão Google (`google-oauth2`) configurada no tenant; apresentar erros sem expor tokens.
-- [ ] T018 [US1] Integrar o estado Auth0, proteção de rotas e logout em `apps/web/src/app/session.tsx` e `apps/web/src/app/routes.tsx`; exibir o ID público do titular com ação de copiar em `apps/web/src/features/profile/PublicIdCard.tsx`.
+- [X] T018 [US1] Integrar o estado Auth0, proteção de rotas e logout em `apps/web/src/app/session.tsx` e `apps/web/src/app/routes.tsx`; exibir o ID público do titular com ação de copiar em `apps/web/src/features/profile/PublicIdCard.tsx`.
 - [ ] T019 [US1] Implementar estados vazios e navegação inicial após autenticação em `apps/web/src/features/conversations/EmptyConversations.tsx`, orientando o usuário a adicionar contatos antes de iniciar conversas.
 
 **Checkpoint**: O cadastro, o login/logout e a apresentação segura do ID funcionam sem depender de contatos ou mensagens.
