@@ -11,13 +11,22 @@ enum AuthProvider {
   AUTH0
 }
 
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
 model User {
-  id           String        @id @default(uuid()) @db.Uuid
-  publicId     String        @unique @db.VarChar(12)
-  email        String
-  displayName  String
-  createdAt    DateTime      @default(now()) @db.Timestamptz(6)
-  authIdentity AuthIdentity?
+  id                 String        @id @default(uuid()) @db.Uuid
+  publicId           String        @unique @db.VarChar(12)
+  email              String
+  displayName        String
+  createdAt          DateTime      @default(now()) @db.Timestamptz(6)
+  authIdentity       AuthIdentity?
+  friendshipsAsLow   Friendship[]  @relation("FriendshipLow")
+  friendshipsAsHigh  Friendship[]  @relation("FriendshipHigh")
+  friendshipRequests Friendship[]  @relation("FriendshipRequester")
 }
 
 model AuthIdentity {
@@ -29,4 +38,20 @@ model AuthIdentity {
   user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerSubject])
+}
+
+model Friendship {
+  id            String           @id @default(uuid()) @db.Uuid
+  userLowId     String           @db.Uuid
+  userHighId    String           @db.Uuid
+  requestedById String           @db.Uuid
+  status        FriendshipStatus @default(PENDING)
+  createdAt     DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime         @updatedAt @db.Timestamptz(6)
+
+  userLow   User @relation("FriendshipLow", fields: [userLowId], references: [id], onDelete: Cascade)
+  userHigh  User @relation("FriendshipHigh", fields: [userHighId], references: [id], onDelete: Cascade)
+  requester User @relation("FriendshipRequester", fields: [requestedById], references: [id], onDelete: Cascade)
+
+  @@unique([userLowId, userHighId])
 }
