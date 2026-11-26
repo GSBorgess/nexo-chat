@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify'
 
 import { authRoutes } from './features/auth/auth.routes.js'
+import { friendshipRoutes } from './features/friendships/friendship.routes.js'
 import { disconnectPrisma } from './infrastructure/database/prisma.js'
 import { registerErrorHandler } from './infrastructure/http/error-handler.js'
 import { registerSecurityPlugins } from './infrastructure/http/security-plugins.js'
@@ -13,6 +14,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   registerErrorHandler(app)
   await registerSecurityPlugins(app)
   await app.register(authRoutes, { prefix: '/api' })
+  await app.register(friendshipRoutes, { prefix: '/api' })
 
   await app.register(
     async (instance) => {
